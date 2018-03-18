@@ -3,15 +3,18 @@
 #include <sys/types.h>
 #include <unistd.h>
 #include <string.h>
- #include <sys/wait.h>
-
+#include <sys/wait.h>
+#define maxstdin 100
 
 int main(int argc, char* argv[])
 {
-    char * stdin =malloc(100);
+    char * stdin =malloc(maxstdin);
     int i=0;
     //como el echo que me mandan de la entrada
-    while((stdin[i++]=getchar())!=-1);
+    while((stdin[i++]=getchar())!=-1){
+    	if (i>maxstdin)
+    		fprintf(stderr, "max input=%d\n",maxstdin);
+    }
     stdin[--i]='\0';
     //creo pipes
     int my_pipe[2];
@@ -27,17 +30,18 @@ int main(int argc, char* argv[])
     if(child_id == 0){ // child process
         close(my_pipe[0]); // child doesn't read
         dup2(my_pipe[1], 1); // redirijo la salida standard (el 1) a mi pipe 
-        char *command=malloc(100);
+        char *command=malloc(maxstdin);
         //armo el comando a ejecutar porque consumi el stdin de la entrada standard
         strcpy(command,"echo -n ");
         strcat(command,stdin);
         strcat(command,"|");
         strcat(command,argv[1]);
         system(command);
-        wait(0);
+        free(command);
+        return 0;
     }
     else{
-        char * aux= malloc(100);
+        char * aux= malloc(maxstdin);
         int position=0;
         close(my_pipe[1]); // parent doesn't write
 
@@ -57,6 +61,8 @@ int main(int argc, char* argv[])
         }
         fprintf(stderr, "%d\n%d\n",inparity,outparity);
         close(my_pipe[0]);
-        wait(0);
+        free(aux);
+        free(stdin);
+        return 0;
     }
 }
